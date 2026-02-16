@@ -1,0 +1,301 @@
+# n8n Integration for Antigravity - Summary
+
+> **Status:** ✅ Complete
+> **Date:** 2026-01-19
+> **Integration Type:** MCP Server + Skills + Agent
+
+---
+
+## 📦 WHAT WAS INSTALLED
+
+### 1. n8n Skills (5 Skills Created)
+
+All skills created in `.agent/skills/` directory:
+
+#### ✅ n8n-expression-syntax
+**Location:** `.agent/skills/n8n-expression-syntax/SKILL.md`
+**Purpose:** Master n8n expression syntax with `{{}}`, `$json`, `$node`, `$now`, `$env`
+**Covers:** 525+ n8n nodes with expression support
+
+#### ✅ n8n-mcp-tools
+**Location:** `.agent/skills/n8n-mcp-tools/SKILL.md`
+**Purpose:** Expert guide for using n8n-mcp MCP tools
+**Covers:** 1,084 n8n nodes, 20 MCP tools, validation profiles
+
+#### ✅ n8n-workflow-patterns
+**Location:** `.agent/skills/n8n-workflow-patterns/SKILL.md`
+**Purpose:** Five proven workflow architectural patterns
+**Patterns:**
+1. Webhook Processing
+2. HTTP API Integration
+3. Database Operations
+4. AI Agent Workflows
+5. Scheduled Tasks
+
+#### ✅ n8n-code-javascript
+**Location:** `.agent/skills/n8n-code-javascript/SKILL.md`
+**Purpose:** JavaScript implementation in n8n Code nodes
+**Covers:** Execution modes, data access, 10 production-tested patterns
+
+#### ✅ n8n-node-configuration
+**Location:** `.agent/skills/n8n-node-configuration/SKILL.md`
+**Purpose:** Operation-aware node configuration guidance
+**Covers:** Required vs optional fields, authentication, property dependencies
+
+### 2. n8n Workflow Builder Agent
+
+#### ✅ n8n-workflow-builder
+**Location:** `.agent/n8n-workflow-builder.md`
+**Purpose:** Expert n8n workflow automation specialist agent
+**Capabilities:**
+- Workflow discovery and planning
+- Node discovery and configuration
+- Incremental workflow building
+- Validation and deployment
+- Production best practices
+
+**Skills Used:**
+- n8n-expression-syntax
+- n8n-mcp-tools
+- n8n-workflow-patterns
+- n8n-code-javascript
+- n8n-node-configuration
+- brainstorming
+- clean-code
+
+### 3. MCP Server Configuration
+
+#### ✅ n8n-mcp-config.md
+**Location:** `.agent/mcp-servers/n8n-mcp-config.md`
+**Purpose:** Complete setup guide for n8n-mcp MCP server
+**Includes:**
+- Installation options (NPX, Docker, Local)
+- Environment variables
+- Antigravity configuration examples
+- Testing procedures
+- Troubleshooting guide
+
+---
+
+## 🚀 HOW TO USE
+
+### Step 1: Configure n8n-mcp MCP Server
+
+**You need to add the MCP server to Antigravity's configuration.**
+
+1. **Get your n8n credentials:**
+   - Log into your n8n instance
+   - Go to Settings → API
+   - Create new API key
+   - Copy the API key and instance URL
+
+2. **Add to Antigravity MCP configuration:**
+
+   Add this to your MCP servers configuration file:
+
+   ```json
+   {
+     "mcpServers": {
+       "n8n-mcp": {
+         "command": "npx",
+         "args": ["-y", "n8n-mcp"],
+         "env": {
+           "NODE_ENV": "production",
+           "LOG_LEVEL": "error",
+           "MCP_MODE": "stdio",
+           "DISABLE_CONSOLE_OUTPUT": "true",
+           "N8N_API_URL": "https://your-n8n-instance.app.n8n.cloud",
+           "N8N_API_KEY": "your-api-key-here"
+         }
+       }
+     }
+   }
+   ```
+
+3. **Restart Antigravity**
+
+4. **Test the connection:**
+   ```
+   Search for Slack nodes in n8n
+   ```
+
+### Step 2: Activate the n8n Workflow Builder Agent
+
+Once the MCP server is configured, you can use the agent:
+
+```
+Use the n8n-workflow-builder agent to create a webhook workflow
+```
+
+Or directly invoke skills:
+
+```
+Show me n8n workflow patterns for API integration
+```
+
+### Step 3: Build Your First Workflow
+
+Example prompts:
+
+```
+Create an n8n workflow that:
+1. Receives webhook data from a form submission
+2. Validates the email field
+3. Stores the data in PostgreSQL
+4. Sends a confirmation email
+```
+
+```
+Build a scheduled workflow that fetches data from an API every hour and updates a Google Sheet
+```
+
+```
+Create an AI agent workflow that analyzes customer support tickets
+```
+
+---
+
+## 🎯 AVAILABLE CAPABILITIES
+
+### MCP Tools (20 Tools)
+
+**Documentation & Discovery (No API required):**
+- `search_nodes` - Find n8n nodes
+- `get_node` - Get node details
+- `validate_node` - Validate node config
+- `search_templates` - Find workflow templates (2,709+ available)
+- `get_template` - Get template details
+- `validate_workflow` - Validate complete workflow
+- `tools_documentation` - MCP tool guides
+
+**Workflow Management (Requires n8n API):**
+- `n8n_create_workflow` - Create new workflow
+- `n8n_get_workflow` - Get workflow details
+- `n8n_update_partial_workflow` - Update workflow incrementally ⭐ Most used
+- `n8n_update_full_workflow` - Replace entire workflow
+- `n8n_list_workflows` - List workflows
+- `n8n_delete_workflow` - Delete workflow
+- `n8n_validate_workflow` - Validate workflow in instance
+- `n8n_autofix_workflow` - Auto-fix common issues
+
+### Workflow Patterns
+
+1. **Webhook Processing** - Real-time event handling
+2. **HTTP API Integration** - Data synchronization
+3. **Database Operations** - ETL workflows
+4. **AI Agent Workflow** - Intelligent automation
+5. **Scheduled Tasks** - Periodic operations
+
+### Node Coverage
+
+- **1,084 total nodes** (537 core + 547 community)
+- **99% node property coverage**
+- **2,709+ workflow templates**
+- **Average response time:** ~12ms
+
+---
+
+## 📋 QUICK REFERENCE
+
+### Common Use Cases
+
+**"I need to process webhook data"**
+→ Use Webhook Processing pattern
+
+**"I need to sync data between systems"**
+→ Use HTTP API Integration pattern
+
+**"I need to transform database data"**
+→ Use Database Operations pattern
+
+**"I need an AI chatbot"**
+→ Use AI Agent Workflow pattern
+
+**"I need periodic reports"**
+→ Use Scheduled Tasks pattern
+
+### Expression Syntax Quick Ref
+
+```javascript
+{{$json.field}}                           // Current node output
+{{$node["NodeName"].json.field}}          // Other node output
+{{$json.body.field}}                      // Webhook data
+{{$json.field ?? 'default'}}              // Default value
+{{$now.format('yyyy-MM-dd')}}             // Current date
+```
+
+### Code Node Quick Ref
+
+```javascript
+// All Items mode
+const items = $input.all();
+return items.map(item => ({
+  json: { ...item.json, processed: true }
+}));
+
+// Each Item mode
+const item = $input.item;
+return [{
+  json: { fullName: item.json.firstName + ' ' + item.json.lastName }
+}];
+```
+
+---
+
+## 🔗 FILE STRUCTURE
+
+```
+.agent/
+├── skills/
+│   ├── n8n-expression-syntax/
+│   │   └── SKILL.md
+│   ├── n8n-mcp-tools/
+│   │   └── SKILL.md
+│   ├── n8n-workflow-patterns/
+│   │   └── SKILL.md
+│   ├── n8n-code-javascript/
+│   │   └── SKILL.md
+│   └── n8n-node-configuration/
+│       └── SKILL.md
+├── mcp-servers/
+│   └── n8n-mcp-config.md
+├── n8n-workflow-builder.md
+└── n8n-integration-summary.md (this file)
+```
+
+---
+
+## ✅ SETUP CHECKLIST
+
+**Installation:**
+- [x] Created 5 n8n skills
+- [x] Created n8n-workflow-builder agent
+- [x] Created MCP server configuration guide
+- [x] Created integration summary
+
+**Your Next Steps:**
+- [ ] Configure n8n-mcp MCP server in Antigravity
+- [ ] Add your n8n API credentials
+- [ ] Restart Antigravity
+- [ ] Test connection with "Search for Slack nodes in n8n"
+- [ ] Build your first workflow
+
+---
+
+## 📚 REFERENCES
+
+- **n8n-mcp GitHub:** https://github.com/czlonkowski/n8n-mcp
+- **n8n-mcp Dashboard:** https://dashboard.n8n-mcp.com
+- **n8n Documentation:** https://docs.n8n.io/
+- **n8n Templates:** https://n8n.io/workflows/
+- **n8n Community:** https://community.n8n.io/
+
+---
+
+## 🎉 YOU'RE READY!
+
+All n8n skills and the MCP server configuration are now integrated into Antigravity. 
+
+**Next step:** Configure the n8n-mcp MCP server using the guide in `.agent/mcp-servers/n8n-mcp-config.md`
+
+Once configured, you'll be able to build production-ready n8n workflows directly from Antigravity! 🚀
