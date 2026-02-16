@@ -1,0 +1,2043 @@
+# N8N Workflow Builder with Claude
+
+## Project Overview
+
+This project enables Claude to build high-quality n8n workflows using the n8n-mcp MCP server and n8n-skills. You have access to tools and skills that allow you to create production-ready workflows across all major automation categories.
+
+### Target Workflow Types
+- **Data Integration & ETL**: Moving and transforming data between systems (APIs, databases, files)
+- **Automation Workflows**: Automated business processes, scheduled tasks, event-driven actions
+- **AI Agent Workflows**: LLM-powered agents, RAG systems, AI processing pipelines
+- **Webhook & API Services**: Creating custom APIs and webhook endpoints for external integrations
+
+### Project Structure
+```
+N8N- Builder/
+├── Claude.md          # This file - instructions for Claude
+└── Testing/           # Test workflows and validation
+```
+
+---
+
+## MCP Server Configuration
+
+### n8n-mcp Server
+- **Repository**: https://github.com/czlonkowski/n8n-mcp
+- **Purpose**: Provides MCP tools for discovering, configuring, validating, and managing n8n workflows
+- **Statistics**:
+  - 1,084 nodes indexed (537 core + 547 community)
+  - 99% node property coverage
+  - 2,646 pre-extracted template configurations
+  - Average response time: ~12ms
+
+### Installation Options
+
+#### Option 1: NPX (Easiest)
+```bash
+npx n8n-mcp
+```
+
+#### Option 2: Docker (Recommended for Production)
+```bash
+docker run -e MCP_MODE=stdio -e LOG_LEVEL=error ghcr.io/czlonkowski/n8n-mcp:latest
+```
+
+#### Option 3: Local Build
+```bash
+git clone https://github.com/czlonkowski/n8n-mcp.git
+cd n8n-mcp
+npm install
+npm run build
+npm run rebuild
+```
+
+#### Option 4: Hosted Service
+Visit **dashboard.n8n-mcp.com** - Free tier: 100 daily API calls
+
+### Required Environment Variables
+
+**Core Configuration (Required for Claude Desktop):**
+```bash
+MCP_MODE=stdio              # REQUIRED - prevents JSON parsing errors
+LOG_LEVEL=error             # Suppress debug output
+NODE_ENV=production         # Runtime environment
+NODE_DB_PATH=./data/nodes.db  # Database location
+```
+
+**n8n API Integration (Required for Workflow Management):**
+```bash
+N8N_API_URL=https://jmrsolutionz.app.n8n.cloud      # Your n8n instance endpoint
+N8N_API_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxZmFlMmY5Yi0yNTVkLTRiOTctYjEwNC1hMmRiZmViNWNlNTciLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzY4NTg1NTg3LCJleHAiOjE3NzYzMTU2MDB9.InmL62M5KSQ3Gu5xXmuEj440PfeB26fAqubTLwlHLOg                   # API authentication
+N8N_API_TIMEOUT=30000                           # Request timeout (ms)
+N8N_API_MAX_RETRIES=3                           # Retry count
+```
+
+**Optional Configuration:**
+```bash
+OPENAI_API_KEY=your-key                         # For metadata generation
+OPENAI_MODEL=gpt-4o-mini                        # AI model selection
+INSTANCE_CACHE_MAX=100                          # Cached instances
+INSTANCE_CACHE_TTL_MINUTES=30                   # Cache expiration
+WEBHOOK_SECURITY_MODE=moderate                  # SSRF protection
+```
+
+### Claude Desktop Configuration
+
+**Config File Locations:**
+- **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+- **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
+- **Linux**: `~/.config/Claude/claude_desktop_config.json`
+
+**Configuration Example (Local):**
+```json
+{
+  "mcpServers": {
+    "n8n-mcp": {
+      "command": "node",
+      "args": ["/absolute/path/to/n8n-mcp/dist/mcp/index.js"],
+      "env": {
+        "NODE_ENV": "production",
+        "LOG_LEVEL": "error",
+        "MCP_MODE": "stdio",
+        "DISABLE_CONSOLE_OUTPUT": "true",
+        "N8N_API_URL": "https://jmrsolutionz.app.n8n.cloud",
+        "N8N_API_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxZmFlMmY5Yi0yNTVkLTRiOTctYjEwNC1hMmRiZmViNWNlNTciLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzY4NTg1NTg3LCJleHAiOjE3NzYzMTU2MDB9.InmL62M5KSQ3Gu5xXmuEj440PfeB26fAqubTLwlHLOg"
+      }
+    }
+  }
+}
+```
+
+**Configuration Example (Docker):**
+```json
+{
+  "mcpServers": {
+    "n8n-mcp": {
+      "command": "docker",
+      "args": [
+        "run", "-i", "--rm",
+        "-e", "MCP_MODE=stdio",
+        "-e", "LOG_LEVEL=error",
+        "-e", "DISABLE_CONSOLE_OUTPUT=true",
+        "-e", "N8N_API_URL=https://jmrsolutionz.app.n8n.cloud",
+        "-e", "N8N_API_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxZmFlMmY5Yi0yNTVkLTRiOTctYjEwNC1hMmRiZmViNWNlNTciLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzY4NTg1NTg3LCJleHAiOjE3NzYzMTU2MDB9.InmL62M5KSQ3Gu5xXmuEj440PfeB26fAqubTLwlHLOg",
+        "ghcr.io/czlonkowski/n8n-mcp:latest"
+      ]
+    }
+  }
+}
+```
+
+---
+
+## Available MCP Tools Reference
+
+You have access to 20 MCP tools organized into two categories:
+
+### Documentation & Discovery Tools (7 tools)
+These tools work without n8n API credentials. Use them to discover and validate node configurations.
+
+#### 1. `tools_documentation`
+Access MCP tool guides with progressive detail levels.
+- **Parameters**: `detail_level` (essentials/full)
+- **Use**: Get quick reference or comprehensive guide for all MCP tools
+
+#### 2. `search_nodes`
+Find n8n nodes using keyword queries with flexible matching.
+- **Parameters**:
+  - `query`: Search keyword
+  - `matchMode`: 'OR' | 'AND' | 'FUZZY' (default: OR)
+  - `source`: 'core' | 'community' | 'verified' | 'all' (optional)
+- **Returns**: Node names, descriptions, example configurations from real templates
+- **Use**: Discover nodes for your workflow needs
+
+#### 3. `get_node`
+Retrieve detailed node information at multiple levels.
+- **Parameters**:
+  - `nodeType`: Node identifier (e.g., 'nodes-base.httpRequest')
+  - `detail`: 'minimal' | 'standard' | 'full' (default: standard)
+  - `mode`: 'documentation' | 'properties' | 'versions' (optional)
+- **Detail Levels**:
+  - `minimal`: ~1-2KB, metadata only (fastest)
+  - `standard`: Essential properties with examples, 90% size reduction
+  - `full`: Complete schemas, 50-100KB (use sparingly)
+- **Use**: Get node configuration details before adding to workflow
+
+#### 4. `validate_node`
+Validate individual node configurations against schema.
+- **Parameters**:
+  - `nodeType`: Node identifier
+  - `parameters`: Node configuration object
+  - `profile`: 'minimal' | 'runtime' | 'ai-friendly' | 'strict'
+- **Returns**: Errors (blocking), warnings (non-blocking), suggestions (optional)
+- **Use**: Validate node config before adding to workflow
+
+#### 5. `get_template`
+Fetch complete workflow templates by ID.
+- **Parameters**:
+  - `templateId`: Template identifier from n8n.io
+  - `detail_level`: Adjustable response granularity
+- **Returns**: Full workflow JSON ready for deployment
+- **Use**: Start with proven templates instead of building from scratch
+
+#### 6. `search_templates`
+Discover workflow templates from 2,709+ available templates.
+- **Parameters**:
+  - `query`: Search keyword
+  - `mode`: 'keyword' | 'node' | 'task' | 'metadata'
+  - `filters`: Complexity, setup time, required services
+- **Returns**: Template IDs, descriptions, node lists, metadata
+- **Use**: Find templates matching your workflow requirements
+
+#### 7. `validate_workflow`
+End-to-end workflow validation.
+- **Parameters**:
+  - `workflow`: Complete workflow object
+  - `profile`: 'minimal' | 'runtime' | 'ai-friendly' | 'strict'
+- **Validates**: Structure, connections, expressions, AI Agent workflows
+- **Use**: Validate complete workflow before deployment
+
+### Workflow Management Tools (13 tools)
+These tools require n8n API credentials (N8N_API_URL and N8N_API_KEY).
+
+#### 8. `n8n_create_workflow`
+Create new inactive workflows.
+- **Parameters**: name, nodes[], connections, settings
+- **Returns**: Workflow ID and metadata
+- **Use**: Deploy new workflows to n8n instance
+
+#### 9. `n8n_get_workflow`
+Retrieve existing workflows.
+- **Parameters**:
+  - `workflowId`: Workflow identifier
+  - `detail`: 'full' | 'details' | 'structure' | 'minimal'
+- **Use**: Read workflow for analysis or modification
+
+#### 10. `n8n_update_full_workflow`
+Replace entire workflow with new configuration.
+- **Parameters**: workflowId, complete workflow object
+- **Use**: Major workflow restructuring (use partial updates for incremental changes)
+
+#### 11. `n8n_update_partial_workflow` ⭐ Most Used
+Apply incremental diff operations to workflows.
+- **Parameters**: workflowId, diff operations array
+- **Operations**: add/remove/update nodes, manage connections, update metadata
+- **Success Rate**: 99.0% (38,287+ uses)
+- **Use**: Preferred method for workflow modifications
+
+#### 12. `n8n_list_workflows`
+List workflows with filtering and pagination.
+- **Parameters**: filters (active status, tags, projects), pagination
+- **Returns**: Workflow metadata list
+- **Use**: Discover existing workflows
+
+#### 13. `n8n_delete_workflow`
+Permanently remove workflows.
+- **Parameters**: workflowId
+- **Use**: Clean up test or obsolete workflows
+
+#### 14. `n8n_validate_workflow`
+Multi-profile validation for workflows in n8n instance.
+- **Parameters**: workflowId, validation profile
+- **Use**: Validate before activating workflows
+
+#### 15. `n8n_autofix_workflow`
+Auto-correct common workflow issues.
+- **Parameters**:
+  - `workflowId`
+  - `confidence_threshold`: Minimum fix confidence (0-1)
+  - `preview`: true/false (preview before applying)
+- **Auto-Fixes**: Binary operators, unary operators, IF/Switch metadata
+- **Use**: Quick fixes for validation errors
+
+#### 16-20. Additional Management Tools
+- **Execution Testing**: Test workflow execution
+- **Version History**: View and rollback to previous versions
+- **Health Diagnostics**: Check workflow health status
+- **Template Deployment**: Deploy templates from n8n.io
+- **Workflow Export**: Export workflows for backup
+
+---
+
+## n8n-Skills Integration
+
+### Available Skills
+You have access to **7 complementary Claude Code skills** that auto-activate based on query context. These skills work synergistically with the MCP tools.
+
+#### Skill 1: n8n Expression Syntax
+**Purpose**: Validates and corrects n8n workflow expressions
+**Activates When**: Writing expressions with `{{}}` syntax, accessing `$json`/`$node` variables, troubleshooting expression errors
+**Coverage**: 525+ n8n nodes with expression support
+
+**Core Concepts**:
+- All expressions require double curly braces: `{{expression}}`
+- Core variables: `$json`, `$node`, `$now`, `$env`
+- Webhook data nested under `.body` property
+- Node references must be quoted and case-sensitive
+
+#### Skill 2: n8n MCP Tools Expert ⭐ Highest Priority
+**Purpose**: Expert guide for using n8n-mcp MCP tools effectively
+**Activates When**: Searching for nodes, validating configurations, accessing templates, managing workflows
+**Coverage**: 1,084 n8n nodes indexed (537 core + 547 community)
+
+**Key Functions**:
+- Node discovery via `search_nodes` and `get_node`
+- Configuration validation across 4 profiles
+- Workflow creation and editing through partial updates
+- Template searching and deployment
+
+#### Skill 3: n8n Workflow Patterns
+**Purpose**: Implements five proven architectural patterns
+**Activates When**: Planning architecture, building new workflows, addressing specific needs
+
+**Five Core Patterns**: See Common Patterns & Examples section below
+
+#### Skill 4: n8n Validation Expert
+**Purpose**: Interprets errors and provides auto-fixes
+**Activates When**: Debugging workflow errors, validating configurations before deployment
+
+**Error Hierarchy**:
+- **Errors (Blocking)**: missing_required, invalid_value, type_mismatch
+- **Warnings (Non-blocking)**: best_practice, deprecated
+- **Suggestions (Optional)**: optimization opportunities
+
+**Typical Fix Cycle**: 2-3 iterations, averaging 23 seconds analyzing + 58 seconds fixing
+
+#### Skill 5: n8n Node Configuration
+**Purpose**: Operation-aware guidance for node setup
+**Activates When**: Configuring specific nodes, handling property dependencies, setting up AI connections
+
+**Key Focus**: Required vs optional fields, property dependencies, AI connection types
+
+#### Skill 6: n8n Code JavaScript
+**Purpose**: JavaScript implementation in Code nodes
+**Activates When**: Writing JavaScript in Code nodes, troubleshooting errors, making HTTP requests, working with dates
+**Coverage**: 10 production-tested patterns
+
+See Code Node Guidelines section for details.
+
+#### Skill 7: n8n Code Python
+**Purpose**: Python usage in Code nodes
+**Activates When**: Writing Python in Code nodes, working with standard library functions
+
+See Code Node Guidelines section for details.
+
+### Skills Installation
+
+**Claude Code Desktop:**
+```bash
+# Clone the repository
+git clone https://github.com/czlonkowski/n8n-skills.git
+
+# Copy skills to Claude directory
+cp -r n8n-skills/* ~/.claude/skills/
+
+# Restart Claude Code
+```
+
+**Claude.ai Web Interface:**
+1. Download repository
+2. Compress each skill folder into `.zip` files
+3. Upload through Settings → Capabilities → Skills
+
+**Requirements:**
+- Claude Pro Plan (required for Skills access)
+- n8n-mcp MCP Server configured and running
+
+---
+
+## Workflow Building Guidelines
+
+### Standard Workflow Process
+
+Follow this process when building workflows:
+
+1. **Understand Requirements**
+   - Identify workflow type (webhook, API, database, AI agent, scheduled)
+   - Determine data sources and destinations
+   - Map out the logical flow
+
+2. **Search for Nodes**
+   - Use `search_nodes` with FUZZY matching for discovery
+   - Filter by source (core/community/verified)
+   - Review example configurations from real templates
+
+3. **Get Node Details**
+   - Use `get_node` with appropriate detail level
+   - Start with `standard` detail (90% smaller than full)
+   - Use `full` only when complete schema needed
+
+4. **Configure Nodes**
+   - Follow required vs optional field guidance
+   - Set up authentication and credentials
+   - Configure operation-specific parameters
+
+5. **Add Data Mapping Expressions**
+   - Use `{{}}` syntax for all expressions
+   - Reference previous nodes: `{{$node["NodeName"].json.field}}`
+   - Use null-safe operators: `?.` and `??`
+
+6. **Validate Configuration**
+   - Use `validate_workflow` with `runtime` profile
+   - Review errors (blocking), warnings (non-blocking), suggestions (optional)
+   - Use `ai-friendly` profile during development to reduce false positives
+
+7. **Apply Auto-Fixes**
+   - Use `n8n_autofix_workflow` with preview mode
+   - Review confidence scores for each fix
+   - Apply high-confidence fixes automatically
+
+8. **Deploy to n8n Instance**
+   - Create workflow with `n8n_create_workflow`
+   - Test execution before activating
+   - Monitor initial runs for errors
+
+### Best Practices
+
+**Iterative Building:**
+- Build workflows incrementally, one section at a time
+- Validate at each stage before adding more nodes
+- Test individual node configurations before connecting
+
+**Template-First Approach:**
+- Search templates first with `search_templates` before building from scratch
+- Learn from proven patterns in existing templates
+- Adapt templates to your specific needs
+
+**Validation Profiles:**
+- Use `ai-friendly` during development (reduces false positives)
+- Use `runtime` for pre-deployment checks (balanced approach)
+- Use `strict` for production deployments (catches everything)
+- Use `minimal` for quick editing validation (fastest)
+
+**Parallel Operations:**
+- Execute independent operations in parallel
+- Use `search_nodes` and `get_node` concurrently for multiple nodes
+- Batch node operations before connections in partial updates
+
+**Incremental Updates:**
+- Use `n8n_update_partial_workflow` instead of full replacement
+- Batch related operations in single update
+- Apply node operations first, then connections/metadata
+
+**Error Handling:**
+- Always include error handling nodes
+- Add fallback paths for critical operations
+- Log errors to monitoring systems
+
+**Testing:**
+- Test in development environment before production
+- Copy workflows before modification
+- Export backups of important workflows
+- Use preview mode with autofix operations
+
+---
+
+## Common Patterns & Examples
+
+### Pattern 1: Webhook Processing
+**Structure**: Webhook → Validate → Transform → Respond/Notify
+
+**Use Cases**:
+- Payment webhook processing (Stripe, PayPal)
+- Form submissions from websites
+- Real-time event notifications
+- Third-party service callbacks
+
+**Implementation**:
+```
+1. Webhook Trigger
+   - Configure webhook URL and authentication
+   - Set response method (Respond to Webhook node)
+
+2. Validation Node
+   - Verify required fields exist
+   - Check data types and formats
+   - Validate signatures/authentication
+
+3. Transform Data
+   - Map webhook payload to internal format
+   - Enrich with additional data if needed
+   - Format for downstream systems
+
+4. Action & Response
+   - Process the data (database insert, API call, etc.)
+   - Send response back to webhook caller
+   - Send notifications (email, Slack, etc.)
+```
+
+**Example**: Payment Processing
+```
+Webhook (Stripe) → IF (validate signature) → Code (transform) →
+PostgreSQL (insert) → Respond to Webhook (200 OK) →
+Slack (notify team)
+```
+
+### Pattern 2: HTTP API Integration
+**Structure**: Trigger → HTTP Request → Transform → Action → Error Handler
+
+**Use Cases**:
+- Data synchronization between systems
+- Third-party API integration
+- Data pipelines and ETL workflows
+- Periodic data fetching
+
+**Implementation**:
+```
+1. Trigger
+   - Schedule (periodic runs) or
+   - Webhook (event-driven) or
+   - Manual trigger
+
+2. HTTP Request Node
+   - Configure API endpoint and authentication
+   - Set headers, query parameters, body
+   - Handle pagination if needed
+
+3. Transform Data
+   - Parse API response
+   - Filter and map fields
+   - Aggregate or split data
+
+4. Action Nodes
+   - Store in database
+   - Send to another API
+   - Process with custom logic
+
+5. Error Handler
+   - Catch HTTP errors
+   - Retry with backoff
+   - Log failures and alert
+```
+
+**Example**: CRM Synchronization
+```
+Schedule Trigger → HTTP Request (fetch contacts from API A) →
+Code (transform format) → HTTP Request (update API B) →
+Set (track last sync) → ON ERROR → Send Email (alert team)
+```
+
+### Pattern 3: Database Operations
+**Structure**: Schedule → Query → Transform → Write → Verify
+
+**Use Cases**:
+- ETL workflows (Extract, Transform, Load)
+- Cross-database synchronization
+- Data migration and archival
+- Periodic data aggregation
+
+**Implementation**:
+```
+1. Schedule Trigger
+   - Set cron expression for timing
+   - Consider timezone and frequency
+
+2. Query Source Database
+   - Use Postgres, MySQL, MongoDB, etc. nodes
+   - Filter for relevant data (date ranges, status, etc.)
+   - Limit query size for performance
+
+3. Transform Data
+   - Map fields between schemas
+   - Calculate derived values
+   - Handle data type conversions
+
+4. Write to Target
+   - Insert, update, or upsert
+   - Batch operations for efficiency
+   - Handle conflicts and duplicates
+
+5. Verify & Log
+   - Count records processed
+   - Verify data integrity
+   - Log results and errors
+```
+
+**Example**: Daily Report Generation
+```
+Schedule (daily 6am) → PostgreSQL (query orders) →
+Code (aggregate by category) → Google Sheets (write report) →
+PostgreSQL (log completion) → Slack (notify team)
+```
+
+### Pattern 4: AI Agent Workflow
+**Structure**: Trigger → AI Agent (Model + Tools + Memory) → Output
+
+**Use Cases**:
+- Conversational interfaces (chatbots, assistants)
+- Multi-step reasoning tasks
+- Document analysis and generation
+- Intelligent automation with decision-making
+
+**Implementation**:
+```
+1. Trigger
+   - Webhook (chat interface)
+   - Schedule (periodic analysis)
+   - Manual trigger
+
+2. AI Agent Configuration
+   - Select language model (GPT-4, Claude, etc.)
+   - Define system prompt and context
+   - Configure tools/functions agent can use
+   - Set up memory/conversation history
+
+3. Tool Nodes
+   - HTTP Request (fetch external data)
+   - Database Query (retrieve context)
+   - Code (custom logic)
+   - API calls (specialized services)
+
+4. Output Processing
+   - Format AI response
+   - Store conversation history
+   - Trigger follow-up actions
+   - Send to user/system
+```
+
+**Example**: Customer Support Bot
+```
+Webhook (new message) → AI Agent (analyze request) →
+  Tools: [
+    PostgreSQL (lookup customer data)
+    HTTP Request (check order status)
+    Code (calculate refund)
+  ] →
+Respond to Webhook (send answer) →
+PostgreSQL (log interaction)
+```
+
+**AI Agent Validation Requirements**:
+- Validate language model connection
+- Ensure tool nodes are properly connected
+- Check memory configuration
+- Verify output format matches expectations
+
+### Pattern 5: Scheduled Tasks
+**Structure**: Schedule → Fetch → Process → Deliver → Log
+
+**Use Cases**:
+- Periodic reports and summaries
+- Regular data collection
+- System maintenance tasks
+- Monitoring and health checks
+
+**Implementation**:
+```
+1. Schedule Trigger
+   - Set cron expression (hourly, daily, weekly, etc.)
+   - Consider timezone for user-facing tasks
+   - Stagger schedules to avoid resource conflicts
+
+2. Fetch Data
+   - Query databases
+   - Call APIs
+   - Read files or emails
+   - Aggregate from multiple sources
+
+3. Process & Analyze
+   - Transform and filter data
+   - Calculate metrics and KPIs
+   - Generate insights
+   - Format for delivery
+
+4. Deliver Results
+   - Send email reports
+   - Post to Slack/Teams
+   - Update dashboards
+   - Write to database/files
+
+5. Log Execution
+   - Record completion status
+   - Store metrics
+   - Track errors and warnings
+   - Update monitoring systems
+```
+
+**Example**: Weekly Performance Report
+```
+Schedule (Monday 9am) → PostgreSQL (query weekly metrics) →
+Code (calculate KPIs) → Google Sheets (update dashboard) →
+Gmail (send report to team) → PostgreSQL (log execution)
+```
+
+### Cross-Pattern Considerations
+
+**Error Handling** (applies to all patterns):
+- Add error handlers to critical paths
+- Implement retry logic with exponential backoff
+- Log errors with context for debugging
+- Send alerts for critical failures
+
+**Performance Optimization**:
+- Batch operations when possible
+- Use pagination for large datasets
+- Implement caching where appropriate
+- Monitor execution times and optimize bottlenecks
+
+**Security**:
+- Validate and sanitize all inputs
+- Use secure credential storage
+- Implement authentication on webhooks
+- Follow principle of least privilege for API keys
+
+**Monitoring**:
+- Log key events and metrics
+- Set up alerts for failures
+- Track execution frequency and duration
+- Monitor resource usage
+
+---
+
+## Expression Syntax Reference
+
+n8n expressions use double curly braces `{{}}` to access and manipulate data flowing through workflows.
+
+### Core Variables
+
+#### `$json`
+Access current node's output data.
+```javascript
+{{$json.field}}                    // Access field from current node
+{{$json.user.email}}              // Access nested field
+{{$json.items[0].name}}           // Access array element
+{{$json.price * 1.1}}             // Calculations
+```
+
+#### `$node["NodeName"]`
+Reference output from specific nodes (case-sensitive, must be quoted).
+```javascript
+{{$node["HTTP Request"].json.data}}           // Access node output
+{{$node["Get Customer"].json.email}}          // Reference specific node
+{{$node["Previous Step"].json.items[0]}}      // Array access
+```
+
+#### `$now`
+Current timestamp for date/time operations.
+```javascript
+{{$now}}                                      // Current ISO timestamp
+{{$now.format('yyyy-MM-dd')}}                // Formatted date
+{{$now.plus({days: 7})}}                     // Date math (7 days from now)
+{{$now.toUnixInteger()}}                     // Unix timestamp
+```
+
+#### `$env`
+Access environment variables.
+```javascript
+{{$env.API_KEY}}                             // Get API key
+{{$env.DATABASE_URL}}                        // Get database URL
+```
+
+#### `$input`
+Access input data in Code nodes.
+```javascript
+$input.all()                                 // All input items (array)
+$input.first()                               // First input item (object)
+$input.item                                  // Current item (Each Item mode only)
+```
+
+### Webhook Data Access
+
+Webhook payloads are nested under `.body`:
+```javascript
+{{$json.body.email}}                         // Access webhook body field
+{{$json.body.order.items}}                   // Nested webhook data
+{{$json.headers["content-type"]}}            // Access headers
+{{$json.query.param}}                        // Access query parameters
+```
+
+### Null-Safe Operators
+
+Use optional chaining and nullish coalescing to handle missing data:
+```javascript
+{{$json.user?.email}}                        // Optional chaining (returns undefined if user is null)
+{{$json.name ?? 'Unknown'}}                  // Nullish coalescing (default value)
+{{$json.user?.address?.city ?? 'N/A'}}      // Combine both
+```
+
+### Common Expression Patterns
+
+**Conditional Logic:**
+```javascript
+{{$json.status === 'active' ? 'Yes' : 'No'}}                    // Ternary operator
+{{$json.age >= 18 ? 'Adult' : 'Minor'}}                         // Numeric comparison
+```
+
+**String Operations:**
+```javascript
+{{$json.name.toLowerCase()}}                                    // Convert to lowercase
+{{$json.email.includes('@gmail.com')}}                         // Check substring
+{{$json.fullName.split(' ')[0]}}                               // Split and get first element
+{{"Hello " + $json.name}}                                       // String concatenation
+```
+
+**Numeric Operations:**
+```javascript
+{{$json.price * 1.1}}                                           // Multiply (add 10% tax)
+{{$json.total.toFixed(2)}}                                      // Round to 2 decimals
+{{Math.round($json.value)}}                                     // Round to integer
+{{Math.max($json.a, $json.b)}}                                  // Maximum value
+```
+
+**Array Operations:**
+```javascript
+{{$json.items.length}}                                          // Array length
+{{$json.items.map(item => item.name)}}                         // Map array
+{{$json.items.filter(item => item.price > 10)}}                // Filter array
+{{$json.items.find(item => item.id === 123)}}                  // Find element
+```
+
+**Date Operations:**
+```javascript
+{{$now.format('yyyy-MM-dd HH:mm:ss')}}                         // Format current time
+{{DateTime.fromISO($json.date).plus({days: 7})}}               // Add days to date
+{{DateTime.fromISO($json.date).diff(DateTime.now(), 'days')}}  // Days difference
+```
+
+### Critical Rules
+
+1. **Always use `{{}}`**: All expressions must be wrapped in double curly braces
+2. **Quote node references**: `$node["NodeName"]` not `$node[NodeName]`
+3. **Case sensitivity**: Node names are case-sensitive
+4. **Webhook body**: Access webhook data via `.body` property
+5. **Null safety**: Use `?.` and `??` for optional data
+6. **No JavaScript in expressions**: Expressions are evaluated, not executed as code blocks
+
+### Common Mistakes
+
+❌ **Missing curly braces:**
+```javascript
+$json.email                    // Wrong
+{{$json.email}}                // Correct
+```
+
+❌ **Unquoted node references:**
+```javascript
+{{$node[HTTP Request].json}}   // Wrong
+{{$node["HTTP Request"].json}} // Correct
+```
+
+❌ **Confusing Code node with expressions:**
+```javascript
+// In expression field:
+{{return $json.value}}         // Wrong - expressions don't need return
+
+// In Code node:
+return [{json: {value: 123}}]  // Correct - Code nodes need return
+```
+
+---
+
+## Code Node Guidelines
+
+### JavaScript Code Nodes
+
+JavaScript Code nodes allow you to write custom logic using JavaScript. They are more flexible than expressions but require proper return format.
+
+#### Execution Modes
+
+**1. Run Once for All Items (Default)**
+Process all items together. Access data via `$input.all()`.
+
+**Use When**:
+- Aggregating data (sum, average, grouping)
+- Filtering or sorting entire dataset
+- Batch operations
+- Single API call for all items
+
+```javascript
+// Example: Filter items by price
+const items = $input.all();
+const filtered = items.filter(item => item.json.price > 100);
+return filtered;
+```
+
+**2. Run Once for Each Item**
+Process items individually. Access current item via `$input.item`.
+
+**Use When**:
+- Independent per-item operations
+- Each item requires separate API call
+- Item-specific transformations
+- Different logic per item
+
+```javascript
+// Example: Transform each item
+const item = $input.item;
+return {
+  json: {
+    fullName: item.json.firstName + ' ' + item.json.lastName,
+    email: item.json.email.toLowerCase()
+  }
+};
+```
+
+#### Data Access Patterns
+
+```javascript
+// Get all input items (array of objects)
+const allItems = $input.all();
+
+// Get first input item (single object)
+const firstItem = $input.first();
+
+// Get current item (Each Item mode only)
+const currentItem = $input.item;
+
+// Access specific node output
+const httpData = $node["HTTP Request"].json;
+```
+
+#### Required Return Format
+
+Always return an array of objects with `json` properties:
+
+```javascript
+// Single item
+return [{
+  json: {
+    field1: value1,
+    field2: value2
+  }
+}];
+
+// Multiple items
+return [
+  { json: { name: 'Alice', age: 30 } },
+  { json: { name: 'Bob', age: 25 } }
+];
+
+// Transform all items
+const items = $input.all();
+return items.map(item => ({
+  json: {
+    ...item.json,
+    processedAt: new Date().toISOString()
+  }
+}));
+```
+
+#### Built-in Resources
+
+**HTTP Requests:**
+```javascript
+const response = await $helpers.httpRequest({
+  method: 'GET',
+  url: 'https://api.example.com/data',
+  headers: {
+    'Authorization': 'Bearer ' + $env.API_KEY
+  }
+});
+
+return [{ json: response }];
+```
+
+**Date/Time (Luxon):**
+```javascript
+const { DateTime } = require('luxon');
+
+const now = DateTime.now();
+const tomorrow = now.plus({ days: 1 });
+const formatted = now.toFormat('yyyy-MM-dd HH:mm:ss');
+
+return [{
+  json: {
+    current: now.toISO(),
+    tomorrow: tomorrow.toISO(),
+    formatted: formatted
+  }
+}];
+```
+
+**JSON Querying (JMESPath):**
+```javascript
+const data = $input.first().json;
+const result = $jmespath(data, 'items[?price > `100`].name');
+
+return [{ json: { filteredNames: result } }];
+```
+
+#### Common Patterns
+
+**Pattern 1: Data Transformation**
+```javascript
+const items = $input.all();
+
+return items.map(item => ({
+  json: {
+    id: item.json.id,
+    fullName: `${item.json.firstName} ${item.json.lastName}`,
+    email: item.json.email.toLowerCase(),
+    createdAt: new Date().toISOString()
+  }
+}));
+```
+
+**Pattern 2: Filtering & Aggregation**
+```javascript
+const items = $input.all();
+
+// Filter
+const activeUsers = items.filter(item => item.json.status === 'active');
+
+// Aggregate
+const total = items.reduce((sum, item) => sum + item.json.amount, 0);
+
+return [{
+  json: {
+    activeCount: activeUsers.length,
+    totalAmount: total,
+    average: total / items.length
+  }
+}];
+```
+
+**Pattern 3: API Integration**
+```javascript
+const items = $input.all();
+const results = [];
+
+for (const item of items) {
+  const response = await $helpers.httpRequest({
+    method: 'POST',
+    url: 'https://api.example.com/process',
+    body: {
+      id: item.json.id,
+      data: item.json.data
+    }
+  });
+
+  results.push({ json: response });
+}
+
+return results;
+```
+
+**Pattern 4: Error Handling**
+```javascript
+const items = $input.all();
+const results = [];
+
+for (const item of items) {
+  try {
+    // Process item
+    const processed = {
+      id: item.json.id,
+      value: item.json.value * 2
+    };
+    results.push({ json: processed });
+  } catch (error) {
+    // Handle error
+    results.push({
+      json: {
+        id: item.json.id,
+        error: error.message
+      }
+    });
+  }
+}
+
+return results;
+```
+
+#### Common Mistakes
+
+❌ **Missing return statement:**
+```javascript
+const items = $input.all();
+items.map(item => item.json.name);  // Wrong - no return
+```
+
+✅ **Correct:**
+```javascript
+const items = $input.all();
+return items.map(item => ({
+  json: { name: item.json.name }
+}));
+```
+
+❌ **Incorrect return format:**
+```javascript
+return { name: 'Alice' };  // Wrong - missing json wrapper and array
+```
+
+✅ **Correct:**
+```javascript
+return [{ json: { name: 'Alice' } }];
+```
+
+❌ **Confusing expressions with JavaScript:**
+```javascript
+// In expression field:
+{{
+  const name = $json.name;  // Wrong - expressions don't support multi-line JS
+  return name.toUpperCase();
+}}
+```
+
+✅ **Correct (use Code node instead):**
+```javascript
+const name = $input.first().json.name;
+return [{ json: { name: name.toUpperCase() } }];
+```
+
+### Python Code Nodes
+
+Python Code nodes provide Python scripting capabilities with standard library only (no external packages).
+
+#### Data Access
+
+```python
+# Access all items
+items = _input.all()
+
+# Access first item
+first = _input.first()
+
+# Access current item (Each Item mode)
+current = _input.item
+
+# Access specific node
+http_data = _node["HTTP Request"].json
+```
+
+#### Required Return Format
+
+Always return list with `{"json": {...}}` wrapper:
+
+```python
+# Single item
+return [{"json": {"field1": value1, "field2": value2}}]
+
+# Multiple items
+return [
+    {"json": {"name": "Alice", "age": 30}},
+    {"json": {"name": "Bob", "age": 25}}
+]
+
+# Transform all items
+items = _input.all()
+return [
+    {"json": {**item["json"], "processed": True}}
+    for item in items
+]
+```
+
+#### Standard Library Modules
+
+Available modules (no external packages):
+- `json` - JSON parsing and generation
+- `datetime` - Date and time operations
+- `re` - Regular expressions
+- `base64` - Base64 encoding/decoding
+- `hashlib` - Hashing functions
+- `urllib.parse` - URL parsing
+- `math` - Mathematical functions
+- `random` - Random number generation
+- `statistics` - Statistical functions
+
+#### Common Patterns
+
+**Pattern 1: Data Transformation**
+```python
+items = _input.all()
+
+result = []
+for item in items:
+    result.append({
+        "json": {
+            "id": item["json"]["id"],
+            "full_name": f"{item['json']['firstName']} {item['json']['lastName']}",
+            "email": item["json"]["email"].lower()
+        }
+    })
+
+return result
+```
+
+**Pattern 2: Filtering & Aggregation**
+```python
+items = _input.all()
+
+# Filter
+active_users = [
+    item for item in items
+    if item["json"].get("status") == "active"
+]
+
+# Aggregate
+total = sum(item["json"].get("amount", 0) for item in items)
+
+return [{
+    "json": {
+        "active_count": len(active_users),
+        "total_amount": total,
+        "average": total / len(items) if items else 0
+    }
+}]
+```
+
+**Pattern 3: String Processing**
+```python
+import re
+
+items = _input.all()
+
+result = []
+for item in items:
+    text = item["json"].get("description", "")
+
+    # Extract emails
+    emails = re.findall(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b', text)
+
+    result.append({
+        "json": {
+            "original": text,
+            "emails_found": emails,
+            "email_count": len(emails)
+        }
+    })
+
+return result
+```
+
+**Pattern 4: Date Operations**
+```python
+from datetime import datetime, timedelta
+
+items = _input.all()
+
+result = []
+for item in items:
+    created_at = datetime.fromisoformat(item["json"]["created_at"])
+    now = datetime.now()
+    age_days = (now - created_at).days
+
+    result.append({
+        "json": {
+            "id": item["json"]["id"],
+            "created_at": created_at.isoformat(),
+            "age_days": age_days,
+            "is_recent": age_days < 7
+        }
+    })
+
+return result
+```
+
+#### Critical Rules
+
+1. **Standard library only**: No pip packages, no external dependencies
+2. **Return list format**: Always return list with `{"json": {...}}` wrapper
+3. **Safe access**: Use `.get()` method to avoid KeyError
+4. **Webhook data**: Access via `_json["body"]` key
+5. **JavaScript preferred**: Use JavaScript for complex logic when possible
+
+#### Common Mistakes
+
+❌ **Using external packages:**
+```python
+import requests  # Wrong - not available
+```
+
+✅ **Use built-in urllib instead:**
+```python
+from urllib.request import urlopen
+```
+
+❌ **Wrong return format:**
+```python
+return {"name": "Alice"}  # Wrong - missing json wrapper and list
+```
+
+✅ **Correct:**
+```python
+return [{"json": {"name": "Alice"}}]
+```
+
+❌ **Unsafe key access:**
+```python
+value = item["json"]["field"]  # Wrong - raises KeyError if missing
+```
+
+✅ **Correct:**
+```python
+value = item["json"].get("field", "default")  # Safe with default
+```
+
+---
+
+## Validation & Debugging
+
+### Validation Profiles
+
+n8n-mcp provides four validation profiles with different strictness levels:
+
+#### 1. `minimal` - Quick Editing
+**When to Use**: Fast iteration during development, quick changes
+**Speed**: Fastest (basic checks only)
+**Coverage**: Required fields, basic type validation
+**False Positives**: Lowest
+
+#### 2. `runtime` - Pre-Deployment (Recommended)
+**When to Use**: Before deploying workflows, standard validation
+**Speed**: Balanced
+**Coverage**: Required fields, types, connections, basic expression syntax
+**False Positives**: Low
+**Recommended**: Default choice for most use cases
+
+#### 3. `ai-friendly` - AI Development
+**When to Use**: AI-generated workflows, reducing false positives
+**Speed**: Moderate
+**Coverage**: Relaxed validation for AI-specific patterns
+**False Positives**: Reduced for AI edge cases
+**Note**: Designed to reduce false positives common with AI-generated configs
+
+#### 4. `strict` - Production Deployment
+**When to Use**: Production workflows, critical systems
+**Speed**: Slower (comprehensive checks)
+**Coverage**: Everything - required fields, types, connections, expressions, best practices, deprecated features
+**False Positives**: Higher (catches everything)
+
+### Error Hierarchy
+
+Validation returns three levels of feedback:
+
+#### Errors (Blocking)
+These must be fixed before workflow can execute:
+- `missing_required`: Required field not provided
+- `invalid_value`: Value doesn't match expected format
+- `type_mismatch`: Wrong data type
+- `invalid_reference`: Reference to non-existent node
+- `invalid_expression`: Malformed expression syntax
+
+#### Warnings (Non-blocking)
+Best practice violations that won't prevent execution:
+- `best_practice`: Not following recommended patterns
+- `deprecated`: Using deprecated features
+- `performance`: Potential performance issues
+- `security`: Potential security concerns
+
+#### Suggestions (Optional)
+Optimization opportunities:
+- Alternative approaches
+- Performance improvements
+- Code simplification
+- Better patterns
+
+### Typical Fix Cycle
+
+**Average Workflow**:
+- **Iterations**: 2-3 fix cycles
+- **Analysis Time**: 23 seconds per cycle
+- **Fix Implementation**: 58 seconds per cycle
+- **Total Time**: 4-6 minutes for complete validation and fixes
+
+**Process**:
+1. Create/update workflow
+2. Validate with appropriate profile
+3. Review errors, warnings, suggestions
+4. Apply fixes (manual or auto-fix)
+5. Re-validate
+6. Repeat until clean
+
+### Auto-Fix with `n8n_autofix_workflow`
+
+The autofix tool can automatically correct common issues:
+
+**Auto-Fixable Issues**:
+- Binary operators (sanitization)
+- Unary operators (sanitization)
+- IF/Switch node metadata
+- Common expression syntax errors
+
+**Parameters**:
+- `workflowId`: Workflow to fix
+- `confidence_threshold`: Minimum confidence (0-1, default 0.8)
+- `preview`: true/false (preview before applying)
+
+**Usage Pattern**:
+```
+1. Validate workflow → get errors
+2. Call autofix with preview=true
+3. Review proposed fixes and confidence scores
+4. Apply high-confidence fixes (>0.8)
+5. Manually fix low-confidence issues
+6. Re-validate
+```
+
+**Confidence Scores**:
+- **0.9-1.0**: Very safe, apply automatically
+- **0.7-0.9**: Generally safe, review before applying
+- **0.5-0.7**: Uncertain, manual review required
+- **<0.5**: Low confidence, manual fix recommended
+
+### Debugging Strategies
+
+**Strategy 1: Incremental Validation**
+Build and validate in small steps:
+1. Add 1-2 nodes
+2. Validate immediately
+3. Fix any errors
+4. Add next nodes
+5. Repeat
+
+**Strategy 2: Template Comparison**
+When stuck, compare with working templates:
+1. Search templates with similar structure
+2. Get template with `get_template`
+3. Compare node configurations
+4. Identify differences
+5. Adopt working patterns
+
+**Strategy 3: Progressive Detail Levels**
+Start minimal, increase detail as needed:
+1. Validate with `minimal` profile first
+2. Fix blocking errors
+3. Increase to `runtime` profile
+4. Fix warnings
+5. Use `strict` for final check
+
+**Strategy 4: Isolate Problem Nodes**
+When validation fails, isolate the issue:
+1. Use `validate_node` on individual nodes
+2. Test node configurations separately
+3. Validate expressions in isolation
+4. Check connections between nodes
+5. Rebuild problematic sections
+
+### Common Validation Errors
+
+**Error: Missing Required Field**
+```
+Error: Field 'url' is required for node 'HTTP Request'
+Fix: Add the missing field to node parameters
+```
+
+**Error: Invalid Expression**
+```
+Error: Expression {{$json.user.email} is malformed (missing closing brace)
+Fix: {{$json.user.email}}
+```
+
+**Error: Invalid Node Reference**
+```
+Error: Referenced node "HTTP Requuest" does not exist (typo)
+Fix: {{$node["HTTP Request"].json}}
+```
+
+**Warning: Deprecated Feature**
+```
+Warning: Node type 'HttpBin' is deprecated, use 'HTTP Request' instead
+Fix: Replace with recommended node type
+```
+
+**Suggestion: Performance Optimization**
+```
+Suggestion: Consider batching HTTP requests instead of individual calls
+Action: Review and optimize if performance is critical
+```
+
+---
+
+## Safety & Security
+
+### Critical Safety Rules
+
+**🚨 NEVER edit production workflows directly**
+
+Always follow this workflow:
+1. **Copy workflow** before modification
+2. **Test in development** environment first
+3. **Export backups** of important workflows
+4. **Validate all changes** before deployment
+5. **Use preview mode** with autofix operations
+6. **Monitor initial runs** after deployment
+
+### Workflow Modification Safety
+
+**Before Making Changes:**
+- [ ] Copy the workflow (use n8n UI or API)
+- [ ] Document the changes you're making
+- [ ] Have rollback plan ready
+
+**During Development:**
+- [ ] Use `ai-friendly` validation profile
+- [ ] Test individual nodes before connecting
+- [ ] Validate frequently
+- [ ] Use preview mode for autofixes
+
+**Before Production Deployment:**
+- [ ] Validate with `strict` profile
+- [ ] Test with real data in dev environment
+- [ ] Review all errors and warnings
+- [ ] Get stakeholder approval for critical workflows
+- [ ] Export backup of current production version
+
+**After Deployment:**
+- [ ] Monitor first few executions
+- [ ] Watch for errors in logs
+- [ ] Verify output data is correct
+- [ ] Keep backup for quick rollback
+
+### Security Best Practices
+
+**Authentication & Credentials:**
+- Store credentials in n8n's secure credential system
+- Never hardcode API keys or passwords in workflows
+- Use environment variables for sensitive configuration
+- Rotate credentials regularly
+- Follow principle of least privilege
+
+**Webhook Security:**
+- Enable webhook authentication where possible
+- Validate webhook signatures (e.g., Stripe, GitHub)
+- Implement rate limiting
+- Sanitize and validate all input data
+- Use HTTPS endpoints only
+
+**SSRF Protection:**
+- Default webhook security mode: `moderate`
+- Blocks localhost webhooks by default
+- Validate URLs before making HTTP requests
+- Whitelist allowed domains when possible
+
+**Data Validation:**
+- Validate all input data types and formats
+- Sanitize user input before processing
+- Check for SQL injection patterns
+- Validate JSON structures
+- Handle errors gracefully without exposing details
+
+**API Security:**
+- Use API authentication (keys, OAuth, JWT)
+- Implement proper error handling
+- Don't expose sensitive data in responses
+- Log security-relevant events
+- Monitor for unusual activity
+
+### Common Security Issues
+
+**Issue: Exposed Credentials**
+```
+❌ Wrong:
+HTTP Request node with API key: "sk-abc123xyz..."
+
+✅ Correct:
+HTTP Request with credential: {{ $credentials.OpenAI.apiKey }}
+```
+
+**Issue: Unvalidated Webhook Data**
+```
+❌ Wrong:
+Webhook → Direct database insert
+
+✅ Correct:
+Webhook → Validate (check required fields, types, signature) →
+Sanitize → Database insert
+```
+
+**Issue: SQL Injection Risk**
+```
+❌ Wrong:
+Query: SELECT * FROM users WHERE email = '{{$json.email}}'
+
+✅ Correct:
+Use parameterized queries or validate/sanitize input
+```
+
+**Issue: Exposing Internal Errors**
+```
+❌ Wrong:
+Respond to Webhook: { "error": error.stack }
+
+✅ Correct:
+Respond to Webhook: { "error": "An error occurred" }
+Log detailed error internally
+```
+
+### Monitoring & Alerting
+
+**What to Monitor:**
+- Workflow execution failures
+- Execution duration (detect performance issues)
+- Error rates and patterns
+- Resource usage
+- Security events (failed auth, suspicious patterns)
+
+**Alert Triggers:**
+- Critical workflow failures
+- Error rate exceeds threshold
+- Execution time exceeds SLA
+- Security violations
+- Resource exhaustion
+
+**Logging Best Practices:**
+- Log workflow start and completion
+- Log key decision points
+- Log errors with context (but not sensitive data)
+- Include timestamps and workflow IDs
+- Store logs securely with retention policy
+
+---
+
+## Performance Metrics
+
+### Tool Statistics
+
+**Node Coverage:**
+- **1,084 total nodes indexed** (537 core + 547 community)
+- **99% node property coverage**
+- **63.6% operations coverage** for all nodes
+- **87% official documentation** included
+
+**Template Database:**
+- **2,646 pre-extracted template configurations**
+- **2,709+ workflow templates** available
+- **265 AI-capable tool variants** detected
+
+**Performance:**
+- **Average response time**: ~12ms
+- **Database size**: ~70MB SQLite
+- **Most reliable tool**: `n8n_update_partial_workflow` (99.0% success rate, 38,287+ uses)
+- **Docker image**: 82% smaller than standard n8n
+
+**Testing:**
+- **3,336+ tests** with 100% pass rate
+- Comprehensive validation coverage
+
+### Real-World Impact
+
+**Delivery Hero:**
+- Saves **200 hours monthly** with single workflow
+- Use case: Automated order processing and routing
+
+**StepStone:**
+- **25X speed increase** in data integration
+- **2 hours vs 2 weeks** for complex data pipelines
+
+**Typical Results:**
+- Workflow building time: Reduced from **weeks to hours**
+- Error reduction: 90%+ with validation and autofix
+- Developer productivity: 5-10X improvement
+
+### Optimization Tips
+
+**Tip 1: Use Appropriate Detail Levels**
+- `minimal`: 1-2KB (fastest, 90% smaller)
+- `standard`: Balanced, recommended default
+- `full`: 50-100KB (use only when complete schema needed)
+
+**Tip 2: Batch Operations**
+- Combine multiple node operations in single `n8n_update_partial_workflow` call
+- Process multiple items together when possible
+- Use pagination for large datasets
+
+**Tip 3: Parallel Execution**
+- Execute independent MCP tool calls in parallel
+- Process independent workflow branches concurrently
+- Use multiple triggers for parallel workflow instances
+
+**Tip 4: Template-First Approach**
+- Search templates before building from scratch
+- Adapt proven patterns saves development time
+- Learn from community best practices
+
+**Tip 5: Incremental Validation**
+- Validate frequently during development
+- Catch errors early (cheaper to fix)
+- Use appropriate validation profile for context
+
+---
+
+## Tool Execution Principles
+
+### Silent Execution
+
+**Key Principle**: Call MCP tools without announcing them. Execute and report results.
+
+❌ **Don't do this:**
+```
+"I'm going to search for Slack nodes using the search_nodes tool..."
+[calls tool]
+"Now I'll get the details using get_node..."
+[calls tool]
+```
+
+✅ **Do this instead:**
+```
+[calls search_nodes]
+[calls get_node]
+"I found the Slack node. Here's how to configure it..."
+```
+
+**Guidelines:**
+- Execute tools silently
+- Report results after completion
+- Don't explain what tools you're about to use
+- Focus on the answer, not the process
+
+### Parallel Operations
+
+Execute independent operations simultaneously for efficiency:
+
+**Example: Building a workflow**
+```
+// Good - parallel operations
+[search_nodes("slack")]
+[search_nodes("http")]
+[get_template("lead-nurturing")]
+
+// Not optimal - sequential when parallel is possible
+[search_nodes("slack")]
+... wait for result ...
+[search_nodes("http")]
+... wait for result ...
+[get_template("lead-nurturing")]
+```
+
+**When to Use Parallel:**
+- Searching for multiple node types
+- Getting details for multiple nodes
+- Validating independent configurations
+- Fetching multiple templates
+
+**When to Use Sequential:**
+- Operations that depend on previous results
+- Workflow updates (must wait for confirmation)
+- Validation after modifications
+
+### Progressive Detail Levels
+
+Use the minimum detail level needed:
+
+**Quick Lookups** → `minimal` (1-2KB)
+- Node exists?
+- Basic metadata?
+- Quick reference?
+
+**Standard Usage** → `standard` (balanced, 90% smaller than full)
+- Configuration guidance
+- Property descriptions
+- Example values
+- Most common use case
+
+**Complete Schema** → `full` (50-100KB)
+- Need every property
+- Complete validation
+- Complex configurations
+- Edge cases
+
+### Intent Parameters
+
+Include intent in tool calls for contextual responses:
+
+```
+// Without intent
+get_node("nodes-base.httpRequest")
+
+// With intent (better)
+get_node("nodes-base.httpRequest", {
+  intent: "Setting up authentication for REST API"
+})
+```
+
+Benefits:
+- More relevant responses
+- Contextual examples
+- Specific guidance
+
+---
+
+## Configuration Requirements Summary
+
+### Required Environment Variables
+
+**Minimum Required (for MCP server):**
+```bash
+MCP_MODE=stdio                    # REQUIRED for Claude Desktop
+LOG_LEVEL=error                   # Reduce noise
+NODE_ENV=production              # Runtime environment
+```
+
+**For Workflow Management (n8n API access):**
+```bash
+N8N_API_URL=https://your-n8n-instance.com
+N8N_API_KEY=your-api-key-here
+```
+
+**Optional (enhanced features):**
+```bash
+OPENAI_API_KEY=your-key          # Metadata generation
+NODE_DB_PATH=./data/nodes.db     # Database location
+INSTANCE_CACHE_MAX=100           # Cache size
+WEBHOOK_SECURITY_MODE=moderate   # SSRF protection
+```
+
+### Setup Checklist
+
+Before starting, ensure:
+- [ ] n8n-mcp MCP server installed and configured
+- [ ] Claude Desktop config.json updated with n8n-mcp
+- [ ] n8n API credentials configured (if using workflow management)
+- [ ] n8n-skills installed in `~/.claude/skills/` (optional but recommended)
+- [ ] n8n instance accessible and API key tested
+- [ ] Environment variables set correctly
+- [ ] Claude Code restarted to load configuration
+
+### Quick Start
+
+1. **Install n8n-mcp:**
+   ```bash
+   npx n8n-mcp
+   # or use Docker/local build
+   ```
+
+2. **Configure Claude Desktop:**
+   Edit config file at appropriate location (see paths above)
+
+3. **Set environment variables:**
+   Add N8N_API_URL and N8N_API_KEY to config
+
+4. **Install n8n-skills (optional):**
+   ```bash
+   git clone https://github.com/czlonkowski/n8n-skills.git
+   cp -r n8n-skills/* ~/.claude/skills/
+   ```
+
+5. **Restart Claude Code**
+
+6. **Test connection:**
+   Ask Claude to search for nodes or list workflows
+
+---
+
+## Working with Claude
+
+### How to Request Workflows
+
+**Good Request Examples:**
+
+✅ **Specific and detailed:**
+```
+"Create a webhook workflow that receives form submissions, validates the email
+field, stores valid submissions in PostgreSQL, and sends a confirmation email
+using SendGrid."
+```
+
+✅ **Includes context:**
+```
+"I need a scheduled workflow that runs daily at 6am, fetches orders from our
+Shopify store, calculates daily revenue, and posts a summary to our #sales
+Slack channel."
+```
+
+✅ **Mentions constraints:**
+```
+"Build an AI agent workflow using Claude API that analyzes customer support
+tickets. It should check our knowledge base first, then generate responses.
+Keep it simple - no more than 5 nodes."
+```
+
+**Less Effective Requests:**
+
+❌ **Too vague:**
+```
+"Make a workflow for Slack"
+```
+
+❌ **Missing critical details:**
+```
+"Connect my database to an API"
+```
+
+❌ **Unrealistic scope:**
+```
+"Build a complete CRM system with workflows"
+```
+
+### Iterative Development
+
+Work with Claude iteratively:
+
+1. **Start with structure**: "Show me the high-level structure for this workflow"
+2. **Add nodes**: "Add the HTTP Request node for fetching data"
+3. **Configure**: "Configure authentication for the Slack node"
+4. **Test**: "Validate the workflow before deploying"
+5. **Refine**: "Add error handling between steps 2 and 3"
+
+### Asking for Help
+
+**When you need clarification:**
+- "What nodes are available for Google Sheets integration?"
+- "How do I reference a previous node's output?"
+- "What's the difference between Run Once for All Items vs Each Item?"
+
+**When debugging:**
+- "I'm getting this validation error: [paste error]"
+- "The webhook isn't receiving the data I expect"
+- "How can I improve the performance of this workflow?"
+
+**When learning:**
+- "Show me examples of HTTP API integration patterns"
+- "What are best practices for error handling?"
+- "How do I work with arrays in expressions?"
+
+### What Claude Can Do
+
+- ✅ Search for and discover n8n nodes
+- ✅ Explain node configurations and parameters
+- ✅ Build complete workflow structures
+- ✅ Write expressions for data mapping
+- ✅ Write JavaScript/Python code for Code nodes
+- ✅ Validate workflows and suggest fixes
+- ✅ Deploy workflows to your n8n instance
+- ✅ Explain n8n concepts and patterns
+- ✅ Debug errors and issues
+- ✅ Suggest optimizations
+
+### What Requires Your Input
+
+- ❌ Your n8n instance credentials (API key, URL)
+- ❌ Business logic and requirements
+- ❌ Authentication credentials for third-party services
+- ❌ Testing with real data
+- ❌ Production deployment decisions
+- ❌ Monitoring and maintenance
+
+---
+
+## Additional Resources
+
+### Official Documentation
+- **n8n Platform**: https://n8n.io/
+- **n8n Documentation**: https://docs.n8n.io/
+- **n8n Community**: https://community.n8n.io/
+
+### n8n-mcp Resources
+- **GitHub Repository**: https://github.com/czlonkowski/n8n-mcp
+- **Dashboard**: https://dashboard.n8n-mcp.com
+- **Documentation**: See repository README
+
+### n8n-skills Resources
+- **GitHub Repository**: https://github.com/czlonkowski/n8n-skills
+- **Website**: https://www.n8n-skills.com/
+- **Installation Guide**: See repository docs/INSTALLATION.md
+
+### Templates & Examples
+- **n8n Templates**: https://n8n.io/workflows/
+- **7,839+ community templates** available
+- **2,646+ pre-extracted configurations** in n8n-mcp database
+
+### Learning Resources
+- **n8n Courses**: https://docs.n8n.io/courses/
+- **YouTube Tutorials**: Search "n8n workflows"
+- **Community Forum**: https://community.n8n.io/
+
+---
+
+## Changelog & Maintenance
+
+### Version Information
+- **n8n-mcp Compatibility**: n8n v2.33.2+
+- **Claude Code Version**: Latest (as of 2026-01)
+- **Last Updated**: 2026-01-16
+
+### Keeping Up-to-Date
+
+**n8n-mcp Updates:**
+```bash
+# NPX (auto-updates)
+npx n8n-mcp
+
+# Docker (pull latest)
+docker pull ghcr.io/czlonkowski/n8n-mcp:latest
+
+# Local build (update)
+cd n8n-mcp
+git pull
+npm install
+npm run build
+```
+
+**n8n-skills Updates:**
+```bash
+cd n8n-skills
+git pull
+cp -r * ~/.claude/skills/
+```
+
+### Known Limitations
+
+- Python Code nodes: Standard library only (no external packages)
+- Webhook security mode: Blocks localhost by default
+- MCP tool rate limits: Free tier 100 calls/day on hosted service
+- Expression complexity: Very complex expressions may timeout
+
+### Getting Support
+
+**For n8n-mcp issues:**
+- GitHub Issues: https://github.com/czlonkowski/n8n-mcp/issues
+
+**For n8n-skills issues:**
+- GitHub Issues: https://github.com/czlonkowski/n8n-skills/issues
+
+**For n8n platform issues:**
+- Community Forum: https://community.n8n.io/
+- GitHub: https://github.com/n8n-io/n8n
+
+**For Claude Code issues:**
+- GitHub: https://github.com/anthropics/claude-code/issues
+
+---
+
+## Quick Reference Card
+
+### Most Used MCP Tools
+| Tool | Purpose | Common Parameters |
+|------|---------|-------------------|
+| `search_nodes` | Find nodes | query, matchMode='FUZZY' |
+| `get_node` | Node details | nodeType, detail='standard' |
+| `validate_workflow` | Validate complete workflow | workflow, profile='runtime' |
+| `n8n_update_partial_workflow` | Incremental updates | workflowId, operations[] |
+| `n8n_create_workflow` | Create new workflow | name, nodes[], connections |
+| `search_templates` | Find templates | query, mode='keyword' |
+
+### Most Common Expressions
+| Expression | Purpose |
+|------------|---------|
+| `{{$json.field}}` | Access current node output |
+| `{{$node["Name"].json.field}}` | Reference other node |
+| `{{$json.body.field}}` | Webhook data |
+| `{{$json.field ?? 'default'}}` | Default value if null |
+| `{{$now.format('yyyy-MM-dd')}}` | Current date formatted |
+
+### Workflow Patterns Quick Ref
+| Pattern | Structure | Use Case |
+|---------|-----------|----------|
+| Webhook | Webhook → Validate → Transform → Respond | Payment webhooks, form submissions |
+| HTTP API | Trigger → HTTP → Transform → Action | Data sync, API integration |
+| Database | Schedule → Query → Transform → Write | ETL, data migration |
+| AI Agent | Trigger → AI Agent + Tools → Output | Chatbots, intelligent automation |
+| Scheduled | Schedule → Fetch → Process → Deliver | Reports, monitoring |
+
+### Validation Profiles Quick Ref
+| Profile | When to Use | Speed |
+|---------|-------------|-------|
+| `minimal` | Quick edits | Fastest |
+| `runtime` | Pre-deployment (default) | Balanced |
+| `ai-friendly` | AI-generated workflows | Moderate |
+| `strict` | Production deployment | Comprehensive |
+
+---
+
+**End of Claude.md**
+
+When building workflows, remember:
+1. Search templates first
+2. Build iteratively
+3. Validate frequently
+4. Test before production
+5. Always have backups
+
+Happy workflow building! 🚀
